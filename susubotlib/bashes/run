@@ -1,0 +1,21 @@
+#!/bin/bash
+
+pidfile="bot.pid"
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+if [ -f $pidfile ]
+then
+    pid=$(cat $pidfile)
+    if ps -p $pid > /dev/null
+    then
+       echo "$pid is running"
+       kill $pid
+    fi
+    echo Found pid: $pid
+    rm $pidfile
+fi
+
+source $SCRIPT_DIR/venv/bin/activate
+
+nohup bash -c "python3 ${SCRIPT_DIR}/<MAIN_FILE>" &
