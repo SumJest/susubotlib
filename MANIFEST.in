@@ -1,2 +1,3 @@
 include susubotlib/bashes/run
 include susubotlib/bashes/stop
+include susubotlib/susubotlib.ini

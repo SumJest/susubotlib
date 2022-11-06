@@ -4,6 +4,7 @@ README.md
 setup.py
 susubotlib/__init__.py
 susubotlib/pid.py
+susubotlib/susubotlib.ini
 susubotlib.egg-info/PKG-INFO
 susubotlib.egg-info/SOURCES.txt
 susubotlib.egg-info/dependency_links.txt
@@ -12,3 +13,5 @@ susubotlib/api/__init__.py
 susubotlib/api/susubotapi.py
 susubotlib/bashes/run
 susubotlib/bashes/stop
+susubotlib/config/__init__.py
+susubotlib/config/config.py
