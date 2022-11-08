@@ -13,5 +13,9 @@ susubotlib/api/__init__.py
 susubotlib/api/susubotapi.py
 susubotlib/bashes/run
 susubotlib/bashes/stop
+susubotlib/bot/__init__.py
+susubotlib/bot/events.py
 susubotlib/config/__init__.py
 susubotlib/config/config.py
+susubotlib/filters/__init__.py
+susubotlib/filters/payloadfilter.py

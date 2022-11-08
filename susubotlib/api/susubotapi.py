@@ -24,11 +24,12 @@ class SusuBotAPI:
     cache: bool
     use_cache: bool
     base_dir: str
+    offline_mode: bool
 
     def __init__(self, url: str, token: str, bot_name: str):
         self.url = url.rstrip('/')
         self.token = token
-        session_timeout = aiohttp.ClientTimeout(total=None, sock_connect=5, sock_read=5)
+        session_timeout = aiohttp.ClientTimeout(total=None, sock_connect=3, sock_read=3)
         self.client = aiohttp.ClientSession(timeout=session_timeout)
         self.bot_name = bot_name
         self.config = Config("susubotlib.ini")
@@ -37,17 +38,24 @@ class SusuBotAPI:
         self.keyboards_dir = self.config.config['API']['KEYBOARDS_DIR']
         self.messages_dir = self.config.config['API']['MESSAGES_DIR']
         self.base_dir = susubotlib.base_dir
+        self.offline_mode = False
 
     async def _get(self, method: str, **kwargs) -> dict:
         async with self.client.get(f"{self.url}/api/{method}", params=kwargs) as resp:
             r_data = await resp.json()
-
-        if 'ok' not in r_data.keys() or 'data' not in r_data.keys():
+        if 'ok' not in r_data.keys() or ('data' not in r_data.keys() and 'reason' not in r_data.keys()):
             raise APIError(f"Server returned bad data")
         if r_data['ok']:
             return r_data
         else:
             raise APIError(f"Server returned: {r_data['reason'] if 'reason' in r_data.keys() else 'No reason'}")
+
+    async def _check_connection(self):
+        try:
+            data = await self._get("gettime")
+            self.offline_mode = False
+        except:
+            pass
 
     async def _save_keyboard(self, keyboard_name: str, data: str):
         with open(os.path.join(self.base_dir, self.keyboards_dir, f"{keyboard_name}.json"), 'w') as file:
@@ -75,7 +83,7 @@ class SusuBotAPI:
         async with self.client.post(f"{self.url}/api/{method}", params=kwargs, data=json.dumps(data),
                                     headers={'content-type': 'application/json'}) as resp:
             r_data = await resp.json()
-        if 'ok' not in r_data.keys() or 'data' not in r_data.keys():
+        if 'ok' not in r_data.keys() or ('data' not in r_data.keys() and 'reason' not in r_data.keys()):
             raise APIError(f"Server returned bad data")
         if data['ok']:
             return r_data
@@ -88,11 +96,25 @@ class SusuBotAPI:
         :param keyboard: Keyboard name
         :return: str
         """
+        if self.offline_mode:
+            asyncio.get_running_loop().create_task(self._check_connection())
+            if self.use_cache:
+                json_keyboard = await self._get_keyboard_file(keyboard)
+                return json_keyboard
+            else:
+                raise APIError("Server unavailable")
+
         try:
             data = await self._get("getkeyboard", token=self.token, bot_name=self.bot_name, keyboard_name=keyboard)
             json_keyboard = json.dumps(data['data'])
             if self.cache:
                 asyncio.get_running_loop().create_task(self._save_keyboard(keyboard, json_keyboard))
+        except aiohttp.client.ServerTimeoutError as ex:
+            self.offline_mode = True
+            if self.use_cache:
+                json_keyboard = await self._get_keyboard_file(keyboard)
+            else:
+                raise
         except:
             if self.use_cache:
                 json_keyboard = await self._get_keyboard_file(keyboard)
@@ -106,11 +128,24 @@ class SusuBotAPI:
         :param message_name: Message name
         :return: str
         """
+        if self.offline_mode:
+            asyncio.get_running_loop().create_task(self._check_connection())
+            if self.use_cache:
+                message = await self._get_message_file(message_name)
+                return message
+            else:
+                raise APIError("Server unavailable")
         try:
             data = await self._get("getmessage", token=self.token, bot_name=self.bot_name, message_name=message_name)
-            message = json.dumps(data['data'])
+            message = data["data"]
             if self.cache:
-                asyncio.get_running_loop().create_task(self._save_message(message_name, json_keyboard))
+                asyncio.get_running_loop().create_task(self._save_message(message_name, message))
+        except aiohttp.client.ServerTimeoutError as ex:
+            self.offline_mode = True
+            if self.use_cache:
+                message = await self._get_message_file(message_name)
+            else:
+                raise
         except:
             if self.use_cache:
                 message = await self._get_message_file(message_name)

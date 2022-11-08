@@ -1,1 +1,1 @@
-import susubotlib
+from susubotlib.api.susubotapi import SusuBotAPI
